@@ -1,0 +1,72 @@
+
+    model {
+    
+    # -------------------------------------------------
+    # Parameters:
+    # phi: survival probability for adults
+    # breedsucc: probability of breeding successfully (regardless of previous success)
+    # pS: recapture probability when breeding successfully
+    # pF: recapture probability when not breeding or failed
+    # -------------------------------------------------
+    # States (S):
+    # 1 successful breeder
+    # 2 unsuccessful breeder
+    # 3 dead
+    # Observations (O):
+    # 1 seen as successful 
+    # 2 seen as unsuccessful or nonbreeder
+    # 3 not seen
+    # -------------------------------------------------
+    
+    # Priors and constraints
+    # Survival and recapture: uniform
+    phi ~ dunif(0.7, 1)           ## excluded unrealistic survival probabilities
+    breedsucc ~ dunif(0, 1)
+    pS ~ dunif(0.8, 1)             ## very high probability of detecting a breeder
+    pF ~ dunif(0, 0.9)               ## lower probability of detecting failed and nonbreeders
+    
+    # Define state-transition and observation matrices 	
+    for (i in 1:nind){
+    # Define probabilities of state S(t+1) given S(t)
+      for (t in f[i]:(n.occasions-1)){
+        ps[1,i,t,1] <- phi * breedsucc
+        ps[1,i,t,2] <- phi * (1-breedsucc)
+        ps[1,i,t,3] <- (1-phi)
+
+        ps[2,i,t,1] <- phi * breedsucc
+        ps[2,i,t,2] <- phi * (1-breedsucc)
+        ps[2,i,t,3] <- (1-phi)
+
+        ps[3,i,t,1] <- 0
+        ps[3,i,t,2] <- 0
+        ps[3,i,t,3] <- 1
+
+        # Define probabilities of O(t) given S(t)
+        po[1,i,t,1] <- pS
+        po[1,i,t,2] <- 0
+        po[1,i,t,3] <- (1-pS)
+
+        po[2,i,t,1] <- 0
+        po[2,i,t,2] <- pF
+        po[2,i,t,3] <- (1-pF)
+
+        po[3,i,t,1] <- 0
+        po[3,i,t,2] <- 0
+        po[3,i,t,3] <- 1
+
+        } #t
+    } #i
+    
+    # Likelihood 
+    for (i in 1:nind){
+      # Define latent state at first capture   
+      z[i,f[i]] <- y[i,f[i]]
+        for (t in (f[i]+1):n.occasions){
+          # State process: draw S(t) given S(t-1)
+          z[i,t] ~ dcat(ps[z[i,t-1], i, t-1,])
+          # Observation process: draw O(t) given S(t)
+          y[i,t] ~ dcat(po[z[i,t], i, t-1,])
+        } #t
+    } #i
+    }
+    

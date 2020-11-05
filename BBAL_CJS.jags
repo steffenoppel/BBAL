@@ -1,0 +1,37 @@
+
+    model {
+    
+    # -------------------------------------------------
+    # Parameters:
+    # phi: survival probability for breedingadults
+    # p: recapture probability when breeding
+    # -------------------------------------------------
+
+    # Priors and constraints
+    #for (i in 1:nind){
+      for (t in 1:(n.occasions-1)){
+        phi[t] ~ dunif(0.7, 1) 
+        p[t] ~ dunif(0, 1) 
+      } #t
+    #} #i
+    
+    # for (t in 1:(n.occasions-1)){
+    #   ann.phi[t] ~ dunif(0.7, 1)         # Prior for mean survival
+    #   ann.p[t] ~ dunif(0, 1)           # Prior for mean recapture
+    # } #t
+    
+    # Likelihood 
+    for (i in 1:nind){
+      # Define latent state at first capture
+      z[i,f[i]] <- 1
+        for (t in (f[i]+1):n.occasions){
+          # State process
+          z[i,t] ~ dbern(mu1[i,t])
+          mu1[i,t] <- phi[t-1] * z[i,t-1]
+          # Observation process
+          y[i,t] ~ dbern(mu2[i,t])
+          mu2[i,t] <- p[t-1] * z[i,t]
+        } #t
+      } #i
+    }
+    
